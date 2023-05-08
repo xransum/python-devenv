@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
 # This is a script to easily install localized versions of Python
-# bash <(curl -skL https://raw.githubusercontent.com/jeffreytse/zsh-vi-mode/master/install.sh) --list
-
+# 	bash <(curl -skL https://raw.githubusercontent.com/xransum/python-devenv/main/pyfetch.sh) 
+# 		--list
+# 		--prefix ./lib/
+# 		3.9.6 3.8.11
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -10,7 +12,7 @@ YELLOW='\033[0;33m'
 LIGHTBLUE='\033[1;34m' # Light Blue
 NC='\033[0m' # No Color
 
-SCRIPT_NAME="$(basename "$0")"
+SCRIPT_NAME="pyfetch"
 HELP=false
 LIST_VERSIONS=false
 FORCE=false
@@ -54,6 +56,7 @@ function usage() {
 	echo "Usage: $SCRIPT_NAME [options] version [version ...]"
 	echo "Options:"
 	echo "  -p, --prefix <path>  Install to <path> instead of /usr/local"
+	echo "  -f, --force          Force installation even if already installed"
 	echo "  -l, --list           List available versions"
 	echo "  -h, --help           Show this help message and exit"
 }
@@ -93,15 +96,23 @@ done
 
 if [[ -z "$PREFIX" ]]; then
 	echo "No prefix specified"
-	usage
-	exit 1
+	echo -e "${YELLOW}Using default prefix: ./lib/${NC}"
+	PREFIX="./lib/"
 fi
 
+PREFIX="$(readlink -f "$PREFIX")"
+
 if [[ ! -d "$PREFIX" ]]; then
-	echo "Prefix directory $PREFIX does not exist"
+	echo -e "${YELLOW}Prefix directory does not exist: $PREFIX, creating it...${NC}"
+	if ! mkdir -p "$PREFIX"; then
+		echo -e "${RED}Failed to create prefix directory: $PREFIX${NC}"
+		exit 1
+	fi
+fi
+
+if [[ ! -w "$PREFIX" ]]; then
+	echo -e "${RED}Prefix directory is not writable: $PREFIX${NC}"
 	exit 1
-else
-	PREFIX="$(readlink -f "$PREFIX")"
 fi
 
 TEMP_DIR="$(mktemp -d)"
@@ -117,7 +128,6 @@ for version in "$@"; do
 	PREFIX_DIR="$PREFIX/Python-${version}"
 	FILENAME="Python-${version}.tar.xz"
 	url="${PYTHON_FTP_URL}${version}/${FILENAME}"
-	
 	
 	if [[ -d "$PREFIX_DIR" ]]; then
 		if $FORCE; then
@@ -182,25 +192,25 @@ echo ""
 
 echo "Use the following commands to use your new Python installation:"
 for version in "${INSTALLED_VERSIONS[@]}"; do
-	echo "  ${LIGHTBLUE}export PATH=$PREFIX/Python-${version}/bin:\$PATH${NC}"
+	echo -e "  ${LIGHTBLUE}export PATH=$PREFIX/Python-${version}/bin:\$PATH${NC}"
 done
 echo ""
 
 echo "To permanently add this directory to your PATH, add the following line to your ~/.bashrc file:"
 for version in "${INSTALLED_VERSIONS[@]}"; do
-	echo "  ${LIGHTBLUE}export PATH=$PREFIX/Python-${version}/bin:\$PATH${NC}"
+	echo -e "  ${LIGHTBLUE}export PATH=$PREFIX/Python-${version}/bin:\$PATH${NC}"
 done
 echo ""
 
 echo "To use this Python version in a virtual environment, use the following command:"
 for version in "${INSTALLED_VERSIONS[@]}"; do
-	echo "  ${LIGHTBLUE}python${version} -m venv <path>${NC}"
+	echo -e "  ${LIGHTBLUE}python${version} -m venv <path>${NC}"
 done
 echo ""
 
 echo "To use this Python version in a virtual environment with a specific version of Python, use the following command:"
 for version in "${INSTALLED_VERSIONS[@]}"; do
-	echo "  ${LIGHTBLUE}python${version} -m venv --python=$PREFIX/bin/python${version} <path>${NC}"
+	echo -e "  ${LIGHTBLUE}python${version} -m venv --python=$PREFIX/bin/python${version} <path>${NC}"
 done
 echo ""
 
